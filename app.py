@@ -3,8 +3,8 @@ import pandas as pd
 import numpy as np
 from sklearn.preprocessing import StandardScaler
 from sklearn.neighbors import NearestNeighbors
-import plotly.express as px
-import plotly.graph_objects as go
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 # Page configuration
 st.set_page_config(
@@ -132,13 +132,29 @@ st.markdown("""
         display: inline-block;
         margin: 0.2rem;
     }
+    
+    /* Match score */
+    .match-score {
+        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-weight: bold;
+        display: inline-block;
+        margin: 0.5rem 0;
+    }
 </style>
 """, unsafe_allow_html=True)
 
 # Load and preprocess data
 @st.cache_data
 def load_data():
-    df = pd.read_csv("laptop.csv")
+    try:
+        df = pd.read_csv("laptop.csv")
+    except FileNotFoundError:
+        st.error("❌ Error: laptop.csv file not found! Please make sure the file is in the same directory as app.py")
+        st.stop()
+    
     if "Unnamed: 0" in df.columns:
         df.drop(columns=["Unnamed: 0"], inplace=True)
     
@@ -190,6 +206,7 @@ with st.sidebar:
     
     st.markdown("---")
     st.markdown("<p style='color: white; text-align: center;'>Powered by AI 🤖</p>", unsafe_allow_html=True)
+    st.markdown("<p style='color: white; text-align: center; font-size: 0.8rem;'>Machine Learning Recommendation System</p>", unsafe_allow_html=True)
 
 # Page: Home
 if page == "🏠 Home":
@@ -246,23 +263,32 @@ if page == "🏠 Home":
     
     with col1:
         st.markdown("""
-        ### 🎯 Personalized
-        Get recommendations based on your specific needs and budget
-        """)
+        <div style='background: #f8f9fa; padding: 2rem; border-radius: 10px; text-align: center; height: 200px;'>
+            <h2 style='color: #667eea;'>🎯</h2>
+            <h3>Personalized</h3>
+            <p>Get recommendations based on your specific needs and budget</p>
+        </div>
+        """, unsafe_allow_html=True)
     
     with col2:
         st.markdown("""
-        ### 🤖 AI-Powered
-        Machine learning algorithm finds the best matches for you
-        """)
+        <div style='background: #f8f9fa; padding: 2rem; border-radius: 10px; text-align: center; height: 200px;'>
+            <h2 style='color: #667eea;'>🤖</h2>
+            <h3>AI-Powered</h3>
+            <p>Machine learning algorithm finds the best matches for you</p>
+        </div>
+        """, unsafe_allow_html=True)
     
     with col3:
         st.markdown("""
-        ### ⚡ Fast & Easy
-        Find your perfect laptop in seconds, not hours
-        """)
+        <div style='background: #f8f9fa; padding: 2rem; border-radius: 10px; text-align: center; height: 200px;'>
+            <h2 style='color: #667eea;'>⚡</h2>
+            <h3>Fast & Easy</h3>
+            <p>Find your perfect laptop in seconds, not hours</p>
+        </div>
+        """, unsafe_allow_html=True)
     
-    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("<br><br>", unsafe_allow_html=True)
     
     # How it works
     st.markdown("## 🔧 How It Works")
@@ -270,13 +296,28 @@ if page == "🏠 Home":
     steps_col1, steps_col2, steps_col3 = st.columns(3)
     
     with steps_col1:
-        st.info("**Step 1: Set Preferences**\nTell us your budget, RAM, storage, and graphics needs")
+        st.info("**Step 1: Set Preferences**\n\nTell us your budget, RAM, storage, and graphics needs")
     
     with steps_col2:
-        st.info("**Step 2: AI Analysis**\nOur algorithm analyzes thousands of laptops")
+        st.info("**Step 2: AI Analysis**\n\nOur algorithm analyzes thousands of laptops")
     
     with steps_col3:
-        st.info("**Step 3: Get Results**\nReceive top 5 personalized recommendations")
+        st.info("**Step 3: Get Results**\n\nReceive top 5 personalized recommendations")
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # Quick stats
+    st.markdown("## 📈 Quick Statistics")
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.metric("Average Price", f"₹{df['Price'].mean():,.0f}", delta=None)
+        st.metric("Most Common RAM", f"{df['Ram_GB'].mode()[0]} GB", delta=None)
+    
+    with col2:
+        st.metric("Average Rating", f"{df['Rating'].mean():.1f}", delta=None)
+        dedicated_pct = (df['Graphics_Flag'].sum() / len(df)) * 100
+        st.metric("Dedicated Graphics", f"{dedicated_pct:.1f}%", delta=None)
 
 # Page: Find Laptop
 elif page == "🔍 Find Laptop":
@@ -340,32 +381,35 @@ elif page == "🔍 Find Laptop":
         graphics_flag = 0 if graphics == "Integrated (Intel/UHD)" else 1
     
     if st.button("🚀 Find My Laptop", use_container_width=True):
-        # Get recommendations
-        user_input = [[budget, ram, ssd, rating, graphics_flag]]
-        user_scaled = scaler.transform(user_input)
-        distances, indices = knn.kneighbors(user_scaled)
-        
-        recommended = df_display.iloc[indices[0]]
-        
-        st.markdown("### 🎉 Top 5 Recommendations for You")
-        
-        for i, (idx, row) in enumerate(recommended.iterrows(), 1):
-            match_score = max(0, 100 - (distances[0][i-1] * 10))
+        with st.spinner("🔍 Analyzing laptops..."):
+            # Get recommendations
+            user_input = [[budget, ram, ssd, rating, graphics_flag]]
+            user_scaled = scaler.transform(user_input)
+            distances, indices = knn.kneighbors(user_scaled)
             
-            st.markdown(f"""
-            <div class="laptop-card">
-                <h3>#{i} {row['Model']}</h3>
-                <div class="price-badge">{row['Price']}</div>
-                <p style="color: #667eea; font-weight: bold;">Match Score: {match_score:.1f}%</p>
-                <p>
-                    <span class="spec-badge">💾 {row['Ram']}</span>
-                    <span class="spec-badge">💿 {row['SSD']}</span>
-                    <span class="spec-badge">🎮 {row['Graphics']}</span>
-                    <span class="spec-badge">🖥️ {row['Display']}</span>
-                    <span class="spec-badge">⭐ {row['Rating']}</span>
-                </p>
-            </div>
-            """, unsafe_allow_html=True)
+            recommended = df_display.iloc[indices[0]]
+            
+            st.markdown("### 🎉 Top 5 Recommendations for You")
+            
+            for i, (idx, row) in enumerate(recommended.iterrows(), 1):
+                match_score = max(0, 100 - (distances[0][i-1] * 10))
+                
+                st.markdown(f"""
+                <div class="laptop-card">
+                    <h3>#{i} {row['Model']}</h3>
+                    <div class="price-badge">{row['Price']}</div>
+                    <div class="match-score">Match Score: {match_score:.1f}%</div>
+                    <p>
+                        <span class="spec-badge">💾 {row['Ram']}</span>
+                        <span class="spec-badge">💿 {row['SSD']}</span>
+                        <span class="spec-badge">🎮 {row['Graphics']}</span>
+                        <span class="spec-badge">🖥️ {row['Display']}</span>
+                        <span class="spec-badge">⭐ {row['Rating']}</span>
+                    </p>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            st.success("✅ Recommendations generated successfully!")
 
 # Page: Analytics
 elif page == "📊 Analytics":
@@ -378,11 +422,14 @@ elif page == "📊 Analytics":
     
     # Price distribution
     st.markdown("### 💰 Price Distribution")
-    fig_price = px.histogram(df, x='Price', nbins=30, 
-                             title='Laptop Price Distribution',
-                             color_discrete_sequence=['#667eea'])
-    fig_price.update_layout(showlegend=False)
-    st.plotly_chart(fig_price, use_container_width=True)
+    fig, ax = plt.subplots(figsize=(10, 5))
+    ax.hist(df['Price'], bins=30, color='#667eea', edgecolor='black', alpha=0.7)
+    ax.set_xlabel('Price (₹)', fontsize=12)
+    ax.set_ylabel('Frequency', fontsize=12)
+    ax.set_title('Laptop Price Distribution', fontsize=14, fontweight='bold')
+    ax.grid(axis='y', alpha=0.3)
+    st.pyplot(fig)
+    plt.close()
     
     col1, col2 = st.columns(2)
     
@@ -390,38 +437,100 @@ elif page == "📊 Analytics":
         # RAM distribution
         st.markdown("### 💾 RAM Distribution")
         ram_counts = df['Ram_GB'].value_counts().sort_index()
-        fig_ram = px.pie(values=ram_counts.values, names=ram_counts.index,
-                        title='RAM Configuration',
-                        color_discrete_sequence=px.colors.sequential.Purples_r)
-        st.plotly_chart(fig_ram, use_container_width=True)
+        
+        fig, ax = plt.subplots(figsize=(8, 8))
+        colors = sns.color_palette("Purples_r", len(ram_counts))
+        wedges, texts, autotexts = ax.pie(ram_counts.values, 
+                                           labels=[f'{x} GB' for x in ram_counts.index],
+                                           autopct='%1.1f%%',
+                                           colors=colors,
+                                           startangle=90)
+        ax.set_title('RAM Configuration', fontsize=14, fontweight='bold')
+        for autotext in autotexts:
+            autotext.set_color('white')
+            autotext.set_fontweight('bold')
+        st.pyplot(fig)
+        plt.close()
     
     with col2:
         # Graphics distribution
         st.markdown("### 🎮 Graphics Card Type")
         graphics_counts = df['Graphics_Flag'].value_counts()
-        fig_graphics = px.pie(values=graphics_counts.values, 
-                             names=['Integrated', 'Dedicated'],
-                             title='Graphics Card Distribution',
-                             color_discrete_sequence=['#FFA07A', '#667eea'])
-        st.plotly_chart(fig_graphics, use_container_width=True)
+        
+        fig, ax = plt.subplots(figsize=(8, 8))
+        colors = ['#FFA07A', '#667eea']
+        wedges, texts, autotexts = ax.pie(graphics_counts.values, 
+                                           labels=['Integrated', 'Dedicated'],
+                                           autopct='%1.1f%%',
+                                           colors=colors,
+                                           startangle=90)
+        ax.set_title('Graphics Card Distribution', fontsize=14, fontweight='bold')
+        for autotext in autotexts:
+            autotext.set_color('white')
+            autotext.set_fontweight('bold')
+        st.pyplot(fig)
+        plt.close()
     
     # Price vs Rating
     st.markdown("### 📈 Price vs Rating Analysis")
-    fig_scatter = px.scatter(df, x='Price', y='Rating', 
-                            size='Ram_GB', color='Graphics_Flag',
-                            title='Price vs Rating (Size = RAM)',
-                            color_discrete_sequence=['#FFA07A', '#667eea'],
-                            labels={'Graphics_Flag': 'Graphics Type'})
-    st.plotly_chart(fig_scatter, use_container_width=True)
+    fig, ax = plt.subplots(figsize=(12, 6))
+    
+    integrated = df[df['Graphics_Flag'] == 0]
+    dedicated = df[df['Graphics_Flag'] == 1]
+    
+    scatter1 = ax.scatter(integrated['Price'], integrated['Rating'], 
+                         s=integrated['Ram_GB']*10, alpha=0.6, 
+                         c='#FFA07A', label='Integrated', edgecolors='black', linewidth=0.5)
+    scatter2 = ax.scatter(dedicated['Price'], dedicated['Rating'], 
+                         s=dedicated['Ram_GB']*10, alpha=0.6, 
+                         c='#667eea', label='Dedicated', edgecolors='black', linewidth=0.5)
+    
+    ax.set_xlabel('Price (₹)', fontsize=12)
+    ax.set_ylabel('Rating', fontsize=12)
+    ax.set_title('Price vs Rating (Bubble size = RAM)', fontsize=14, fontweight='bold')
+    ax.legend(title='Graphics Type', fontsize=10)
+    ax.grid(alpha=0.3)
+    st.pyplot(fig)
+    plt.close()
     
     # Top brands
     st.markdown("### 🏆 Top Laptop Brands")
     df_display['Brand'] = df_display['Model'].str.split().str[0]
     brand_counts = df_display['Brand'].value_counts().head(10)
     
-    fig_brands = px.bar(x=brand_counts.index, y=brand_counts.values,
-                       title='Top 10 Laptop Brands',
-                       labels={'x': 'Brand', 'y': 'Count'},
-                       color=brand_counts.values,
-                       color_continuous_scale='Purples')
-    st.plotly_chart(fig_brands, use_container_width=True)
+    fig, ax = plt.subplots(figsize=(12, 6))
+    colors = sns.color_palette("Purples_r", len(brand_counts))
+    bars = ax.bar(brand_counts.index, brand_counts.values, color=colors, edgecolor='black')
+    ax.set_xlabel('Brand', fontsize=12)
+    ax.set_ylabel('Count', fontsize=12)
+    ax.set_title('Top 10 Laptop Brands', fontsize=14, fontweight='bold')
+    ax.grid(axis='y', alpha=0.3)
+    plt.xticks(rotation=45, ha='right')
+    
+    # Add value labels on bars
+    for bar in bars:
+        height = bar.get_height()
+        ax.text(bar.get_x() + bar.get_width()/2., height,
+                f'{int(height)}',
+                ha='center', va='bottom', fontweight='bold')
+    
+    plt.tight_layout()
+    st.pyplot(fig)
+    plt.close()
+    
+    # Summary statistics
+    st.markdown("### 📊 Summary Statistics")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.info(f"**Total Laptops:** {len(df)}")
+        st.info(f"**Avg Price:** ₹{df['Price'].mean():,.0f}")
+    
+    with col2:
+        st.info(f"**Price Range:** ₹{df['Price'].min():,} - ₹{df['Price'].max():,}")
+        st.info(f"**Avg Rating:** {df['Rating'].mean():.2f}")
+    
+    with col3:
+        st.info(f"**Most Common RAM:** {df['Ram_GB'].mode()[0]} GB")
+        st.info(f"**Most Common SSD:** {df['SSD_GB'].mode()[0]} GB")
